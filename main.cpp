@@ -96,13 +96,8 @@ void generate_codes(
     generate_codes(root->right, code + "1", codes);
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " filename" << std::endl;
-        return 1;
-    }
-
-    std::vector<uint8_t> bytes = read_bytes(argv[1]);
+int compress(char* filepath) {
+    std::vector<uint8_t> bytes = read_bytes(filepath);
     std::vector<int> freq = count_freq(bytes);
 
     std::priority_queue<Node*, std::vector<Node*>, comparator> tree = freq_to_huffman_tree(freq);
@@ -116,5 +111,55 @@ int main(int argc, char* argv[]) {
 
     generate_codes(root, "", codes);
 
+    uint8_t accumulator = 0;
+    int bit_count = 0;
+
+    std::ofstream ofs;
+
+    ofs.open("test.mz", std::ios::binary);
+
+    ofs.write(reinterpret_cast<const char*>(freq.data()), freq.size() * sizeof(int));
+
+    for (uint8_t byte : bytes) {
+        std::string code = codes[byte];
+        
+        for (char symb : code) {
+            accumulator <<= 1;
+            if (symb == '1') {
+                accumulator |= 1;
+            }
+            bit_count++;
+            if (bit_count == 8) {
+                ofs.put(accumulator);
+                accumulator = 0;
+                bit_count = 0;
+            }
+        }
+    }
+    if (bit_count > 0) {
+        accumulator <<= (8 - bit_count);
+        ofs.put(accumulator);
+    }
+   
+    ofs.close();
+
     return 0;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 4) {
+        std::cout << "Usage: " << argv[0] << " method input output" << std::endl;
+        return 1;
+    }
+
+    int result;
+
+    if (argv[1] == "compress") {
+        result = compress(argv[2]);
+    }
+    else {
+        // result = compress(argv[2]);
+    }
+
+    return result;
 }
