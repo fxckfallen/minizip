@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <vector>
 #include <queue>
+#include <unordered_map>
+#include <string>
 
 struct Node
 {
@@ -49,15 +51,7 @@ struct comparator {
     }
 };
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        std::cout << "Usage: " << argv[0] << " filename" << std::endl;
-        return 1;
-    }
-
-    std::vector<uint8_t> bytes = read_bytes(argv[1]);
-    std::vector<int> freq = count_freq(bytes);
-
+std::priority_queue<Node*, std::vector<Node*>, comparator> freq_to_huffman_tree(std::vector<int> freq) {
     std::priority_queue<Node*, std::vector<Node*>, comparator> tree;
 
     for (int i = 0; i < 256; ++i) {
@@ -80,6 +74,47 @@ int main(int argc, char* argv[]) {
         root->right = right;
         tree.push(root);
     }
+
+    return tree;
+}
+
+void generate_codes(
+    Node* root, 
+    std::string code, 
+    std::unordered_map<uint8_t, std::string>& codes
+) {
+    if (root == nullptr) {
+        return;
+    }
+
+    if (root->left == nullptr && root->right == nullptr) {
+        codes[root->byte] = code;
+        return;
+    }
+
+    generate_codes(root->left, code + "0", codes);
+    generate_codes(root->right, code + "1", codes);
+}
+
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        std::cout << "Usage: " << argv[0] << " filename" << std::endl;
+        return 1;
+    }
+
+    std::vector<uint8_t> bytes = read_bytes(argv[1]);
+    std::vector<int> freq = count_freq(bytes);
+
+    std::priority_queue<Node*, std::vector<Node*>, comparator> tree = freq_to_huffman_tree(freq);
+    if (tree.size() == 0) {
+        std::cout << "Tree is empty" << std::endl;
+        return 1;
+    }
+    Node* root = tree.top();
+
+    std::unordered_map<uint8_t, std::string> codes;
+
+    generate_codes(root, "", codes);
 
     return 0;
 }
