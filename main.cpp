@@ -19,6 +19,8 @@ std::vector<uint8_t> read_bytes(char* filepath) {
     std::ifstream ifs;
     ifs.open(filepath, std::ios::binary);
 
+    if (!ifs.is_open()) std::cout << "Failed to open file: [" << filepath << "]" << std::endl;
+
     std::vector<uint8_t> chars;
 
     char c = ifs.get();
@@ -96,11 +98,12 @@ void generate_codes(
     generate_codes(root->right, code + "1", codes);
 }
 
-int compress(char* filepath) {
-    std::vector<uint8_t> bytes = read_bytes(filepath);
+int compress(char* input, char* output) {
+    std::vector<uint8_t> bytes = read_bytes(input);
     std::vector<int> freq = count_freq(bytes);
 
     std::priority_queue<Node*, std::vector<Node*>, comparator> tree = freq_to_huffman_tree(freq);
+
     if (tree.size() == 0) {
         std::cout << "Tree is empty" << std::endl;
         return 1;
@@ -116,7 +119,7 @@ int compress(char* filepath) {
 
     std::ofstream ofs;
 
-    ofs.open("test.mz", std::ios::binary);
+    ofs.open(output, std::ios::binary);
 
     ofs.write(reinterpret_cast<const char*>(freq.data()), freq.size() * sizeof(int));
 
@@ -143,6 +146,8 @@ int compress(char* filepath) {
    
     ofs.close();
 
+    std::cout << "Compressed." << std::endl;
+
     return 0;
 }
 
@@ -153,9 +158,8 @@ int main(int argc, char* argv[]) {
     }
 
     int result;
-
-    if (argv[1] == "compress") {
-        result = compress(argv[2]);
+    if (std::string(argv[1]) == "compress") {
+        result = compress(argv[2], argv[3]);
     }
     else {
         // result = compress(argv[2]);
