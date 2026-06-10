@@ -151,6 +151,57 @@ int compress(char* input, char* output) {
     return 0;
 }
 
+int decompress(char* input, char* output) {
+    std::vector<int> freq(256, 0);
+    std::ifstream ifs;
+    std::ofstream ofs;
+
+    ifs.open(input, std::ios::binary);
+    ofs.open(output, std::ios::binary);
+    if (!ifs.is_open()) std::cout << "Failed to open file: [" << input << "]" << std::endl;
+    if (!ofs.is_open()) std::cout << "Failed to open file: [" << output << "]" << std::endl;
+    ifs.read(reinterpret_cast<char*>(freq.data()), 256 * sizeof(int));
+
+    std::priority_queue<Node*, std::vector<Node*>, comparator> tree = freq_to_huffman_tree(freq);
+    if (tree.size() == 0) return 1;
+    Node* root = tree.top();
+    Node* current = root;
+
+    long long total_chars = 0;
+    for (int symb : freq) {
+        total_chars += symb;
+    }
+
+    long long decoded_chars = 0;
+
+    char c = ifs.get();
+
+    while (ifs.good()) {
+        uint8_t byte = static_cast<uint8_t>(c);
+        
+        for (int i = 7; i >= 0; i--) {
+            bool bit = (byte >> i) & 1;
+            current = bit ? current->right : current->left;
+            if (current->left == nullptr && current->right == nullptr) {
+                ofs.put(current->byte);
+                current = root;
+                decoded_chars++;
+                if (decoded_chars == total_chars) {
+                    std::cout << "Decompressed." << std::endl;
+                    ifs.close();
+                    ofs.close();
+                    return 0; 
+                }
+            }
+        }
+
+        c = ifs.get();
+    }
+    
+    
+    return 1;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 4) {
         std::cout << "Usage: " << argv[0] << " method input output" << std::endl;
@@ -162,7 +213,7 @@ int main(int argc, char* argv[]) {
         result = compress(argv[2], argv[3]);
     }
     else {
-        // result = compress(argv[2]);
+        result = decompress(argv[2], argv[3]);
     }
 
     return result;
